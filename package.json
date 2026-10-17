@@ -4,7 +4,8 @@
   "description": "Personal budgeting in Pakistani Rupees",
   "scripts": {
     "build": "tailwindcss -i ./src/input.css -o ./styles.css --minify",
-    "dev": "tailwindcss -i ./src/input.css -o ./styles.css --watch"
+    "dev": "tailwindcss -i ./src/input.css -o ./styles.css --watch",
+    "vercel-build": "npm run build && rm -rf public && mkdir public && cp -r index.html app.js styles.css sw.js manifest.json icons public/"
   },
   "devDependencies": {
     "@tailwindcss/cli": "4.3.3",
