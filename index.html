@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f7a4f">
+  <title>PKR Budget</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon.svg">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>PKR Budget</h1>
+    <div class="month-picker">
+      <button id="prevMonth" aria-label="Previous month">&#8249;</button>
+      <input type="month" id="monthInput" aria-label="Month">
+      <button id="nextMonth" aria-label="Next month">&#8250;</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Dashboard -->
+    <section id="view-dashboard" class="view active">
+      <div class="cards">
+        <div class="card stat income"><span>Income</span><strong id="statIncome">Rs 0</strong></div>
+        <div class="card stat expense"><span>Expenses</span><strong id="statExpense">Rs 0</strong></div>
+        <div class="card stat"><span>Saved this month</span><strong id="statNet">Rs 0</strong></div>
+        <div class="card stat"><span>Overall balance</span><strong id="statBalance">Rs 0</strong></div>
+      </div>
+
+      <div class="card">
+        <h2>Budget for this month</h2>
+        <div id="budgetOverall"></div>
+      </div>
+
+      <div class="card">
+        <h2>Spending by category</h2>
+        <div id="categoryBars" class="bars"></div>
+      </div>
+
+      <div class="card">
+        <h2>Balance by account</h2>
+        <div id="accountList" class="account-list"></div>
+      </div>
+
+      <div class="card">
+        <h2>Recent transactions</h2>
+        <ul id="recentList" class="tx-list"></ul>
+      </div>
+    </section>
+
+    <!-- Transactions -->
+    <section id="view-transactions" class="view">
+      <div class="card filters">
+        <input type="search" id="searchInput" placeholder="Search notes or categories">
+        <select id="typeFilter">
+          <option value="all">All types</option>
+          <option value="expense">Expenses</option>
+          <option value="income">Income</option>
+          <option value="transfer">Transfers</option>
+        </select>
+        <select id="categoryFilter"><option value="all">All categories</option></select>
+      </div>
+      <div class="card">
+        <ul id="txList" class="tx-list"></ul>
+      </div>
+    </section>
+
+    <!-- Budgets -->
+    <section id="view-budgets" class="view">
+      <div class="card">
+        <h2>Monthly budgets</h2>
+        <p class="muted">Set how much you want to spend on each category every month. Leave it empty for no limit.</p>
+        <form id="budgetForm" class="budget-form"></form>
+      </div>
+    </section>
+
+    <!-- Settings -->
+    <section id="view-settings" class="view">
+      <div class="card">
+        <h2>Categories</h2>
+        <form id="categoryForm" class="inline-form">
+          <select id="newCategoryType">
+            <option value="expense">Expense</option>
+            <option value="income">Income</option>
+          </select>
+          <input id="newCategoryName" placeholder="New category name" required maxlength="40">
+          <button type="submit" class="btn">Add</button>
+        </form>
+        <h3>Expense</h3>
+        <div id="expenseCategories" class="chips"></div>
+        <h3>Income</h3>
+        <div id="incomeCategories" class="chips"></div>
+      </div>
+
+      <div class="card">
+        <h2>Accounts</h2>
+        <form id="accountForm" class="inline-form">
+          <input id="newAccountName" placeholder="e.g. Meezan Bank, SadaPay" required maxlength="40">
+          <button type="submit" class="btn">Add</button>
+        </form>
+        <div id="accountChips" class="chips"></div>
+      </div>
+
+      <div class="card">
+        <h2>Backup &amp; export</h2>
+        <p class="muted">Your data is stored only in this browser. Make a backup now and then.</p>
+        <div class="btn-row">
+          <button id="exportJson" class="btn">Download backup (JSON)</button>
+          <button id="exportCsv" class="btn">Export to CSV (Excel)</button>
+          <label class="btn secondary">Restore backup
+            <input type="file" id="importJson" accept="application/json,.json" hidden>
+          </label>
+          <button id="resetAll" class="btn danger">Erase all data</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <button id="addBtn" class="fab" aria-label="Add transaction">+</button>
+
+  <nav class="tabbar">
+    <button data-view="dashboard" class="active">Dashboard</button>
+    <button data-view="transactions">Transactions</button>
+    <button data-view="budgets">Budgets</button>
+    <button data-view="settings">Settings</button>
+  </nav>
+
+  <dialog id="txDialog">
+    <form id="txForm" method="dialog">
+      <h2 id="txDialogTitle">Add transaction</h2>
+      <div class="segmented" role="radiogroup">
+        <label><input type="radio" name="type" value="expense" checked><span>Expense</span></label>
+        <label><input type="radio" name="type" value="income"><span>Income</span></label>
+        <label><input type="radio" name="type" value="transfer"><span>Transfer</span></label>
+      </div>
+      <label>Amount (Rs)
+        <input type="number" name="amount" min="1" step="any" inputmode="decimal" required>
+      </label>
+      <label id="categoryField">Category
+        <select name="category"></select>
+      </label>
+      <label><span id="accountLabel">Account</span>
+        <select name="account"></select>
+      </label>
+      <label id="toAccountField" hidden>To account
+        <select name="toAccount"></select>
+      </label>
+      <label>Date
+        <input type="date" name="date" required>
+      </label>
+      <label>Note
+        <input type="text" name="note" maxlength="120" placeholder="Optional">
+      </label>
+      <p id="txError" class="error" hidden></p>
+      <div class="btn-row end">
+        <button type="button" id="deleteTx" class="btn danger" hidden>Delete</button>
+        <button type="button" id="cancelTx" class="btn secondary">Cancel</button>
+        <button type="submit" class="btn">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
