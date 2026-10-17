@@ -2,166 +2,292 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0f7a4f">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f8fafc">
   <title>PKR Budget</title>
+  <script>
+    // Apply the saved theme before the page paints, so there's no flash of the wrong colours.
+    (function () {
+      var t = 'system';
+      try { t = localStorage.getItem('pkr-budget-theme') || 'system'; } catch (e) {}
+      var dark = t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.classList.toggle('dark', dark);
+    })();
+  </script>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/icon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
-  <header class="topbar">
-    <h1>PKR Budget</h1>
-    <div class="month-picker">
-      <button id="prevMonth" aria-label="Previous month">&#8249;</button>
-      <input type="month" id="monthInput" aria-label="Month">
-      <button id="nextMonth" aria-label="Next month">&#8250;</button>
+<body class="min-h-dvh pb-32 font-sans">
+  <!-- Soft background glow -->
+  <div aria-hidden="true" class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+    <div class="animate-float absolute -top-32 -right-24 size-80 rounded-full bg-emerald-300/30 blur-3xl dark:bg-emerald-500/10"></div>
+    <div class="animate-float absolute top-1/3 -left-32 size-80 rounded-full bg-teal-200/30 blur-3xl [animation-delay:-3s] dark:bg-teal-500/5"></div>
+  </div>
+
+  <header class="mx-auto flex max-w-3xl items-center justify-between px-5 pt-6 pb-2" style="padding-top: max(1.5rem, env(safe-area-inset-top))">
+    <div class="flex items-center gap-3">
+      <div class="grid size-11 place-items-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-sm font-extrabold text-white shadow-lg shadow-emerald-600/30">Rs</div>
+      <div>
+        <p id="greeting" class="text-xs font-medium text-slate-500 dark:text-slate-400">Welcome</p>
+        <h1 class="text-lg leading-tight font-extrabold tracking-tight text-slate-900 dark:text-white">PKR Budget</h1>
+      </div>
     </div>
+    <button id="themeToggle" class="icon-btn bg-white shadow-sm ring-1 ring-slate-900/5 dark:bg-slate-900 dark:ring-white/10" aria-label="Toggle dark mode">
+      <svg class="size-5 dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+      <svg class="hidden size-5 dark:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+    </button>
   </header>
 
-  <main>
+  <!-- Month switcher -->
+  <div class="mx-auto max-w-3xl px-5 pt-3">
+    <div class="flex items-center justify-between rounded-2xl bg-white/70 p-1.5 shadow-sm ring-1 ring-slate-900/5 backdrop-blur dark:bg-slate-900/60 dark:ring-white/[0.07]">
+      <button id="prevMonth" class="icon-btn size-9" aria-label="Previous month">
+        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+      <label class="relative cursor-pointer rounded-xl px-4 py-1.5 text-center transition hover:bg-slate-900/5 dark:hover:bg-white/5">
+        <span id="monthLabel" class="block text-[15px] font-bold text-slate-900 dark:text-white">Month</span>
+        <span id="monthHint" class="block text-[11px] font-medium text-slate-400">Tap to pick</span>
+        <input type="month" id="monthInput" class="absolute inset-0 cursor-pointer opacity-0" aria-label="Pick month">
+      </label>
+      <button id="nextMonth" class="icon-btn size-9" aria-label="Next month">
+        <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <main class="mx-auto max-w-3xl px-5 pt-5">
     <!-- Dashboard -->
-    <section id="view-dashboard" class="view active">
-      <div class="cards">
-        <div class="card stat income"><span>Income</span><strong id="statIncome">Rs 0</strong></div>
-        <div class="card stat expense"><span>Expenses</span><strong id="statExpense">Rs 0</strong></div>
-        <div class="card stat"><span>Saved this month</span><strong id="statNet">Rs 0</strong></div>
-        <div class="card stat"><span>Overall balance</span><strong id="statBalance">Rs 0</strong></div>
+    <section id="view-dashboard" class="view space-y-5">
+      <!-- Hero balance card -->
+      <div class="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-700 p-6 text-white shadow-xl shadow-emerald-700/25 dark:shadow-emerald-950/50">
+        <div aria-hidden="true" class="absolute -top-16 -right-10 size-48 rounded-full bg-white/10"></div>
+        <div aria-hidden="true" class="absolute -bottom-20 -left-8 size-48 rounded-full bg-white/5"></div>
+        <div class="relative">
+          <p class="text-sm font-medium text-emerald-50/80">Total balance</p>
+          <p id="statBalance" class="mt-1 text-4xl font-extrabold tracking-tight tabular-nums">Rs 0</p>
+          <p id="statNetLine" class="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold backdrop-blur"></p>
+          <div class="mt-6 grid grid-cols-2 gap-3">
+            <div class="rounded-2xl bg-white/15 p-3.5 backdrop-blur">
+              <div class="flex items-center gap-2 text-xs font-medium text-emerald-50/80">
+                <span class="grid size-6 place-items-center rounded-full bg-white/20"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M17 7 7 17M17 17H7V7"/></svg></span>
+                Income
+              </div>
+              <p id="statIncome" class="mt-1.5 text-lg font-bold tabular-nums">Rs 0</p>
+            </div>
+            <div class="rounded-2xl bg-white/15 p-3.5 backdrop-blur">
+              <div class="flex items-center gap-2 text-xs font-medium text-emerald-50/80">
+                <span class="grid size-6 place-items-center rounded-full bg-white/20"><svg class="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M7 7h10v10"/></svg></span>
+                Expenses
+              </div>
+              <p id="statExpense" class="mt-1.5 text-lg font-bold tabular-nums">Rs 0</p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="card">
-        <h2>Budget for this month</h2>
-        <div id="budgetOverall"></div>
+      <div class="grid gap-5 md:grid-cols-2">
+        <div class="card animate-fade-up [animation-delay:60ms]">
+          <h2 class="card-title">Monthly budget</h2>
+          <div id="budgetOverall"></div>
+        </div>
+        <div class="card animate-fade-up [animation-delay:120ms]">
+          <h2 class="card-title">Accounts</h2>
+          <div id="accountList" class="stagger space-y-2.5"></div>
+        </div>
       </div>
 
-      <div class="card">
-        <h2>Spending by category</h2>
-        <div id="categoryBars" class="bars"></div>
+      <div class="card animate-fade-up [animation-delay:180ms]">
+        <h2 class="card-title">Where your money went</h2>
+        <div id="categoryBreakdown"></div>
       </div>
 
-      <div class="card">
-        <h2>Balance by account</h2>
-        <div id="accountList" class="account-list"></div>
-      </div>
-
-      <div class="card">
-        <h2>Recent transactions</h2>
-        <ul id="recentList" class="tx-list"></ul>
+      <div class="card animate-fade-up [animation-delay:240ms]">
+        <div class="mb-2 flex items-center justify-between">
+          <h2 class="card-title mb-0">Recent activity</h2>
+          <button data-goto="transactions" class="cursor-pointer rounded-full px-3 py-1 text-sm font-semibold text-emerald-600 transition hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-500/10">See all</button>
+        </div>
+        <ul id="recentList" class="stagger"></ul>
       </div>
     </section>
 
     <!-- Transactions -->
-    <section id="view-transactions" class="view">
-      <div class="card filters">
-        <input type="search" id="searchInput" placeholder="Search notes or categories">
-        <select id="typeFilter">
-          <option value="all">All types</option>
-          <option value="expense">Expenses</option>
-          <option value="income">Income</option>
-          <option value="transfer">Transfers</option>
-        </select>
-        <select id="categoryFilter"><option value="all">All categories</option></select>
+    <section id="view-transactions" class="view hidden space-y-4">
+      <div class="relative">
+        <svg class="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="search" id="searchInput" class="field bg-white pl-12 shadow-sm ring-slate-900/5 dark:bg-slate-900/70 dark:ring-white/[0.07]" placeholder="Search notes, categories, accounts">
       </div>
-      <div class="card">
-        <ul id="txList" class="tx-list"></ul>
+      <div class="grid gap-3 sm:grid-cols-[1fr_14rem]">
+        <div id="typeFilter" class="seg grid-cols-4" role="radiogroup" aria-label="Type">
+          <label><input type="radio" name="typeFilter" value="all" checked><span>All</span></label>
+          <label><input type="radio" name="typeFilter" value="expense"><span>Spent</span></label>
+          <label><input type="radio" name="typeFilter" value="income"><span>Earned</span></label>
+          <label><input type="radio" name="typeFilter" value="transfer"><span>Moved</span></label>
+        </div>
+        <select id="categoryFilter" class="field py-2.5"><option value="all">All categories</option></select>
       </div>
+      <div id="txSummary" class="grid grid-cols-2 gap-3"></div>
+      <div class="card px-3 py-2"><ul id="txList" class="stagger"></ul></div>
     </section>
 
     <!-- Budgets -->
-    <section id="view-budgets" class="view">
-      <div class="card">
-        <h2>Monthly budgets</h2>
-        <p class="muted">Set how much you want to spend on each category every month. Leave it empty for no limit.</p>
-        <form id="budgetForm" class="budget-form"></form>
+    <section id="view-budgets" class="view hidden space-y-4">
+      <div class="px-1">
+        <h2 class="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">Monthly budgets</h2>
+        <p class="muted mt-1">Set a limit for each category. Leave it empty for no limit. Changes save automatically.</p>
       </div>
+      <div id="budgetList" class="stagger space-y-3"></div>
     </section>
 
     <!-- Settings -->
-    <section id="view-settings" class="view">
+    <section id="view-settings" class="view hidden space-y-5">
       <div class="card">
-        <h2>Categories</h2>
-        <form id="categoryForm" class="inline-form">
-          <select id="newCategoryType">
+        <h2 class="card-title">Appearance</h2>
+        <div class="seg grid-cols-3" role="radiogroup" aria-label="Theme">
+          <label><input type="radio" name="theme" value="light"><span>☀️ Light</span></label>
+          <label><input type="radio" name="theme" value="dark"><span>🌙 Dark</span></label>
+          <label><input type="radio" name="theme" value="system"><span>📱 Auto</span></label>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">Categories</h2>
+        <form id="categoryForm" class="flex gap-2">
+          <select id="newCategoryType" class="field w-auto">
             <option value="expense">Expense</option>
             <option value="income">Income</option>
           </select>
-          <input id="newCategoryName" placeholder="New category name" required maxlength="40">
-          <button type="submit" class="btn">Add</button>
+          <input id="newCategoryName" class="field min-w-0" placeholder="New category" required maxlength="40">
+          <button type="submit" class="btn btn-primary px-4">Add</button>
         </form>
-        <h3>Expense</h3>
-        <div id="expenseCategories" class="chips"></div>
-        <h3>Income</h3>
-        <div id="incomeCategories" class="chips"></div>
+        <p class="label mt-5">Expense</p>
+        <div id="expenseCategories" class="flex flex-wrap gap-2"></div>
+        <p class="label mt-5">Income</p>
+        <div id="incomeCategories" class="flex flex-wrap gap-2"></div>
       </div>
 
       <div class="card">
-        <h2>Accounts</h2>
-        <form id="accountForm" class="inline-form">
-          <input id="newAccountName" placeholder="e.g. Meezan Bank, SadaPay" required maxlength="40">
-          <button type="submit" class="btn">Add</button>
+        <h2 class="card-title">Accounts</h2>
+        <form id="accountForm" class="flex gap-2">
+          <input id="newAccountName" class="field min-w-0" placeholder="e.g. Meezan Bank, SadaPay" required maxlength="40">
+          <button type="submit" class="btn btn-primary px-4">Add</button>
         </form>
-        <div id="accountChips" class="chips"></div>
+        <div id="accountChips" class="mt-4 flex flex-wrap gap-2"></div>
       </div>
 
       <div class="card">
-        <h2>Backup &amp; export</h2>
-        <p class="muted">Your data is stored only in this browser. Make a backup now and then.</p>
-        <div class="btn-row">
-          <button id="exportJson" class="btn">Download backup (JSON)</button>
-          <button id="exportCsv" class="btn">Export to CSV (Excel)</button>
-          <label class="btn secondary">Restore backup
-            <input type="file" id="importJson" accept="application/json,.json" hidden>
+        <h2 class="card-title">Backup &amp; export</h2>
+        <p class="muted -mt-2 mb-4">Your data is saved only in this browser. Download a backup now and then.</p>
+        <div class="grid gap-2 sm:grid-cols-2">
+          <button id="exportJson" class="btn btn-soft">💾 Download backup</button>
+          <button id="exportCsv" class="btn btn-soft">📊 Export to Excel (CSV)</button>
+          <label class="btn btn-soft">📂 Restore backup
+            <input type="file" id="importJson" accept="application/json,.json" class="hidden">
           </label>
-          <button id="resetAll" class="btn danger">Erase all data</button>
+          <button id="resetAll" class="btn btn-danger">🗑️ Erase all data</button>
         </div>
       </div>
     </section>
   </main>
 
-  <button id="addBtn" class="fab" aria-label="Add transaction">+</button>
-
-  <nav class="tabbar">
-    <button data-view="dashboard" class="active">Dashboard</button>
-    <button data-view="transactions">Transactions</button>
-    <button data-view="budgets">Budgets</button>
-    <button data-view="settings">Settings</button>
+  <!-- Bottom navigation with the add button in the middle -->
+  <nav class="fixed inset-x-0 bottom-0 z-20 px-4" style="padding-bottom: max(1rem, env(safe-area-inset-bottom))">
+    <div class="mx-auto flex max-w-md items-center rounded-full bg-white/85 px-2 py-1.5 shadow-xl shadow-slate-900/10 ring-1 ring-slate-900/5 backdrop-blur-xl dark:bg-slate-900/85 dark:shadow-black/40 dark:ring-white/10">
+      <button class="nav-btn active" data-view="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2h-4v-7H9v7H5a2 2 0 0 1-2-2z"/></svg>Home
+      </button>
+      <button class="nav-btn" data-view="transactions">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Activity
+      </button>
+      <button id="addBtn" class="mx-1 -mt-8 grid size-16 shrink-0 cursor-pointer place-items-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-600/40 ring-4 ring-slate-50 transition duration-300 hover:scale-105 hover:rotate-90 active:scale-95 dark:ring-slate-950" aria-label="Add transaction">
+        <svg class="size-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+      <button class="nav-btn" data-view="budgets">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>Budgets
+      </button>
+      <button class="nav-btn" data-view="settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>Settings
+      </button>
+    </div>
   </nav>
 
-  <dialog id="txDialog">
-    <form id="txForm" method="dialog">
-      <h2 id="txDialogTitle">Add transaction</h2>
-      <div class="segmented" role="radiogroup">
-        <label><input type="radio" name="type" value="expense" checked><span>Expense</span></label>
-        <label><input type="radio" name="type" value="income"><span>Income</span></label>
-        <label><input type="radio" name="type" value="transfer"><span>Transfer</span></label>
+  <!-- Add / edit transaction -->
+  <dialog id="txDialog" class="sheet">
+    <form id="txForm" class="space-y-5 p-6" style="padding-bottom: max(1.5rem, env(safe-area-inset-bottom))">
+      <div class="mx-auto -mt-2 h-1.5 w-10 rounded-full bg-slate-200 sm:hidden dark:bg-slate-700"></div>
+      <div class="flex items-center justify-between">
+        <h2 id="txDialogTitle" class="text-xl font-extrabold tracking-tight">Add transaction</h2>
+        <button type="button" class="icon-btn" data-close aria-label="Close">
+          <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
       </div>
-      <label>Amount (Rs)
-        <input type="number" name="amount" min="1" step="any" inputmode="decimal" required>
-      </label>
-      <label id="categoryField">Category
-        <select name="category"></select>
-      </label>
-      <label><span id="accountLabel">Account</span>
-        <select name="account"></select>
-      </label>
-      <label id="toAccountField" hidden>To account
-        <select name="toAccount"></select>
-      </label>
-      <label>Date
-        <input type="date" name="date" required>
-      </label>
-      <label>Note
-        <input type="text" name="note" maxlength="120" placeholder="Optional">
-      </label>
-      <p id="txError" class="error" hidden></p>
-      <div class="btn-row end">
-        <button type="button" id="deleteTx" class="btn danger" hidden>Delete</button>
-        <button type="button" id="cancelTx" class="btn secondary">Cancel</button>
-        <button type="submit" class="btn">Save</button>
+
+      <div class="seg grid-cols-3" role="radiogroup" aria-label="Type">
+        <label><input type="radio" name="type" value="expense" checked><span>💸 Expense</span></label>
+        <label><input type="radio" name="type" value="income"><span>💰 Income</span></label>
+        <label><input type="radio" name="type" value="transfer"><span>🔁 Transfer</span></label>
+      </div>
+
+      <div id="amountBox" class="rounded-3xl bg-slate-100 px-5 py-4 text-center transition-colors duration-300 dark:bg-slate-800/80">
+        <label for="amountInput" class="label mb-0">Amount</label>
+        <div class="flex items-baseline justify-center gap-2">
+          <span id="amountPrefix" class="text-2xl font-bold text-rose-500 transition-colors">Rs</span>
+          <input id="amountInput" type="number" name="amount" min="1" step="any" inputmode="decimal" required placeholder="0"
+            class="w-[2ch] max-w-[11ch] bg-transparent text-left text-4xl font-extrabold tracking-tight tabular-nums outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600" style="outline: none">
+        </div>
+        <p id="amountWords" class="h-4 text-xs font-medium text-slate-400"></p>
+      </div>
+
+      <div id="categoryField">
+        <p class="label">Category</p>
+        <div id="categoryPicker" class="grid max-h-48 grid-cols-2 gap-2 overflow-y-auto p-0.5 sm:grid-cols-3"></div>
+      </div>
+
+      <div>
+        <p id="accountLabel" class="label">Paid from</p>
+        <div id="accountPicker" class="flex flex-wrap gap-2"></div>
+      </div>
+
+      <div id="toAccountField" hidden>
+        <p class="label">To account</p>
+        <div id="toAccountPicker" class="flex flex-wrap gap-2"></div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <label class="block"><span class="label">Date</span>
+          <input type="date" name="date" required class="field">
+        </label>
+        <label class="block"><span class="label">Note</span>
+          <input type="text" name="note" maxlength="120" placeholder="Optional" class="field">
+        </label>
+      </div>
+
+      <p id="txError" class="animate-fade-up rounded-2xl bg-rose-50 px-4 py-3 text-sm font-medium text-rose-600 dark:bg-rose-500/10 dark:text-rose-400" hidden></p>
+
+      <div class="flex gap-3 pt-1">
+        <button type="button" id="deleteTx" class="btn btn-danger" hidden>Delete</button>
+        <button type="submit" class="btn btn-primary flex-1">Save</button>
       </div>
     </form>
   </dialog>
+
+  <!-- Confirmation -->
+  <dialog id="confirmDialog" class="sheet sm:max-w-sm">
+    <form method="dialog" class="space-y-4 p-6 text-center" style="padding-bottom: max(1.5rem, env(safe-area-inset-bottom))">
+      <div id="confirmIcon" class="mx-auto grid size-14 place-items-center rounded-full bg-rose-50 text-2xl dark:bg-rose-500/10">⚠️</div>
+      <p id="confirmText" class="text-[15px] font-medium text-slate-700 dark:text-slate-200"></p>
+      <div class="grid grid-cols-2 gap-3">
+        <button value="cancel" class="btn btn-soft">Cancel</button>
+        <button value="ok" id="confirmOk" class="btn btn-danger">Confirm</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toastHost" class="pointer-events-none fixed inset-x-0 top-0 z-50 flex flex-col items-center gap-2 px-4" style="padding-top: max(1rem, env(safe-area-inset-top))"></div>
 
   <script src="app.js"></script>
 </body>

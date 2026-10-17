@@ -11,7 +11,9 @@ It runs entirely in your browser: no sign-up and no server, and your data stays 
 - **Local categories** ready to use: Electricity, Gas, Committee (BC), Zakat & Charity, Family Support and more. You can add or remove them.
 - **Search and filter** transactions by type, category or note.
 - **Backup and restore** as JSON, and **export to CSV** to open in Excel or Google Sheets.
-- **Works offline** and can be installed on your phone's home screen. Supports dark mode.
+- **Light, dark or automatic theme**: switch it with the moon/sun button or in Settings.
+- **Smooth, simple UI** built with Tailwind CSS: animated charts and numbers, a bottom sheet for adding entries, tap-to-pick categories, and amounts also shown in lakh/crore.
+- **Works offline** and can be installed on your phone's home screen.
 
 ## Run it
 
@@ -32,6 +34,17 @@ so use **Settings → Download backup** regularly. To move your data to another 
 | File | Purpose |
 | --- | --- |
 | `index.html` | Page layout |
-| `styles.css` | Styling (light and dark) |
+| `src/input.css` | Tailwind source: theme, components, animations |
+| `styles.css` | Compiled Tailwind CSS (committed, so no build is needed to use the app) |
 | `app.js` | All app logic |
 | `sw.js`, `manifest.json`, `icons/` | Offline support and installing as an app |
+
+## Changing the styles
+
+The app uses [Tailwind CSS](https://tailwindcss.com). You only need this if you edit the design:
+
+```sh
+npm install
+npm run dev     # rebuilds styles.css while you edit
+npm run build   # one-off minified build
+```

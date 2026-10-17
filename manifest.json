@@ -4,8 +4,8 @@
   "description": "Personal budgeting in Pakistani Rupees",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#f4f6f5",
-  "theme_color": "#0f7a4f",
+  "background_color": "#f8fafc",
+  "theme_color": "#10b981",
   "icons": [
     { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
   ]
